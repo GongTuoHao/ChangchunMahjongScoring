@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长春麻将算分器 - Gemini驱动</title>
+    <!-- 引入 Roboto 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS 变量定义 */
+        :root {
+            --bg-page: #E0F2F1;
+            --bg-content: #FFFFFF;
+            --bg-card-top: #BDE0FE;
+            --bg-card-bottom: #F0F0F0;
+            --primary-color: #005F73;
+            --primary-hover: #004C5E;
+            --primary-active: #003B49; /* 点击时变深 */
+            --error-color: #D32F2F;
+            --text-main: #333333;
+            --spacing: 16px;
+            --border-radius: 4px;
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 基础重置与页面排版 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* 主容器 (白色底色) */
+        .app-container {
+            background-color: var(--bg-content);
+            width: 100%;
+            max-width: 600px;
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+            height: fit-content;
+        }
+
+        /* 标题排版 */
+        h1, h2 {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        h1 {
+            font-size: 20px;
+            line-height: 24px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        h2 {
+            font-size: 20px;
+            line-height: 24px;
+            margin-bottom: var(--spacing);
+        }
+
+        /* 正文排版 */
+        p, label, .result-text {
+            font-size: 16px;
+            line-height: 20px;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        /* 上半部分：输入区域 */
+        .input-area {
+            background-color: var(--bg-card-top);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+        }
+
+        /* 单选框组 */
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 自定义单选框样式 */
+        .radio-input {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            background-color: transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* 选中状态填充 */
+        .radio-input:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        /* 错误状态边框变红 */
+        .radio-input.error {
+            border-color: var(--error-color);
+        }
+
+        /* 按钮样式 */
+        .calc-btn {
+            height: 40px;
+            background-color: var(--primary-color);
+            color: #FFFFFF;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            line-height: 20px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .calc-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .calc-btn:active {
+            background-color: var(--primary-active); /* 点击时变深 */
+        }
+
+        /* 下半部分：分值显示区域 */
+        .result-area {
+            background-color: var(--bg-card-bottom);
+        }
+
+        .result-display {
+            background-color: var(--bg-content);
+            padding: var(--spacing);
+            border-radius: var(--border-radius);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border: 1px solid #E0E0E0;
+        }
+        
+        .highlight-text {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>长春麻将算分器</h1>
+        </header>
+
+        <!-- 上半部分：输入区域 -->
+        <section class="card input-area">
+            <div>
+                <h2>选择牌型</h2>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="handType" value="平胡" class="radio-input"> 平胡</label>
+                    <label class="radio-label"><input type="radio" name="handType" value="站立平/夹" class="radio-input"> 站立平/夹</label>
+                    <label class="radio-label"><input type="radio" name="handType" value="站立夹/飘" class="radio-input"> 站立夹/飘</label>
+                    <label class="radio-label"><input type="radio" name="handType" value="站立飘/飘顶/七对" class="radio-input"> 站立飘/飘顶/七对</label>
+                    <label class="radio-label"><input type="radio" name="handType" value="站立飘顶/豪七" class="radio-input"> 站立飘顶/豪七</label>
+                </div>
+            </div>
+
+            <div>
+                <h2>选择胡法</h2>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="winMethod" value="闲点闲" class="radio-input"> 闲点闲</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="闲自摸" class="radio-input"> 闲自摸</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="庄点闲" class="radio-input"> 庄点闲</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="庄自摸" class="radio-input"> 庄自摸</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="闲点庄" class="radio-input"> 闲点庄</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="闲摸宝" class="radio-input"> 闲摸宝</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="庄摸宝" class="radio-input"> 庄摸宝</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="闲对宝" class="radio-input"> 闲对宝</label>
+                    <label class="radio-label"><input type="radio" name="winMethod" value="庄对宝" class="radio-input"> 庄对宝</label>
+                </div>
+            </div>
+
+            <button class="calc-btn" id="calculateBtn">计算未胡牌分值</button>
+        </section>
+
+        <!-- 下半部分：分值显示区域 -->
+        <section class="card result-area">
+            <h2>计算结果</h2>
+            <div class="result-display" id="resultDisplay">
+                <span class="result-text" style="color: #757575;">请选择上方牌型和胡法后点击计算</span>
+            </div>
+        </section>
+    </div>
+
+    <!-- 交互脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resultDisplay = document.getElementById('resultDisplay');
+            const allRadios = document.querySelectorAll('.radio-input');
+
+            // 当用户点击单选框时，清除对应的错误红框状态
+            allRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const groupName = e.target.name;
+                    document.querySelectorAll(`input[name="${groupName}"]`).forEach(r => {
+                        r.classList.remove('error');
+                    });
+                });
+            });
+
+            calculateBtn.addEventListener('click', () => {
+                const selectedHandType = document.querySelector('input[name="handType"]:checked');
+                const selectedWinMethod = document.querySelector('input[name="winMethod"]:checked');
+                
+                let isValid = true;
+
+                // 校验牌型是否选择
+                if (!selectedHandType) {
+                    document.querySelectorAll('input[name="handType"]').forEach(r => r.classList.add('error'));
+                    isValid = false;
+                }
+
+                // 校验胡法是否选择
+                if (!selectedWinMethod) {
+                    document.querySelectorAll('input[name="winMethod"]').forEach(r => r.classList.add('error'));
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    resultDisplay.innerHTML = '<span class="result-text" style="color: var(--error-color);">请输入完整信息（标红项未选择）</span>';
+                    return;
+                }
+
+                // 获取选中值 (此处可以接入Gemini的算分逻辑API或本地公式)
+                const handVal = selectedHandType.value;
+                const winVal = selectedWinMethod.value;
+
+                // 模拟结果渲染
+                resultDisplay.innerHTML = `
+                    <div class="result-text">
+                        当前牌型：<span class="highlight-text">${handVal}</span><br>
+                        当前胡法：<span class="highlight-text">${winVal}</span><br>
+                        <hr style="border:none; border-top:1px dashed #ccc; margin: 12px 0;">
+                        未胡牌玩家需支付：<span class="highlight-text" style="font-size: 24px;">(分值计算中...)</span>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>
