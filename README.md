@@ -1,5 +1,56 @@
-# Vue 3 + TypeScript + Vite
+# 长春麻将算分器
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一个基于 `Vue 3 + Vite + TypeScript + Tailwind CSS` 开发的长春麻将单页面算分应用。  
+用户选择牌型和胡法后，页面会自动展示对应计分结果。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 项目特性
+
+- 单页面应用（SPA），支持静态部署
+- 响应式布局，适配 PC、平板、手机
+- 牌型与胡法选择后自动显示结果（无需点击计算按钮）
+- 点炮类胡法同时展示平炮与黑炮结果（示例：`2+2+1=5`）
+- 计分规则集中管理，便于后续维护与扩展
+
+## 技术栈
+
+- Vue 3
+- Vite
+- TypeScript
+- Tailwind CSS
+
+## 目录结构
+
+```text
+src/
+  assets/        静态资源
+  components/    通用组件
+  utils/         计分规则与计算逻辑
+  views/         页面视图
+docs/
+  scoring-rules.md   计分规则文档
+```
+
+## 本地开发
+
+```bash
+npm install
+npm run dev
+```
+
+启动后访问本地 Vite 开发地址（通常为 `http://localhost:5173`）。
+
+## 构建与预览
+
+```bash
+npm run build
+npm run preview
+```
+
+- 构建产物输出目录：`dist/`
+- `dist/` 可直接部署到任意静态托管平台
+
+## 计分规则说明
+
+- 当前项目采用固定映射计分方式（牌型 × 胡法）
+- 规则明细请查看：
+  - `docs/scoring-rules.md`
