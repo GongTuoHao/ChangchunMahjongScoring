@@ -62,7 +62,8 @@ npm run preview
 
 - 本项目已显式补齐 Pages 构建环境常见缺失的 Linux 原生可选依赖（rolldown、lightningcss、tailwindcss oxide）。
 - 若修改依赖后仍出现构建缓存导致的缺包，请在 Pages 控制台执行 **Clear build cache** 后重新部署。
-- 项目包含 `public/_redirects`：`/* /index.html 200`，用于 SPA 场景下的刷新与直达路由回退。
+- 如果使用的是 Pages 默认部署流程（只构建 `dist`），可按需使用 `_redirects` 做 SPA 回退。
+- 如果使用 `wrangler deploy`（Workers 资产部署）并启用 `assets.not_found_handling = "single-page-application"`，不要再同时使用 `_redirects`，否则可能触发重定向循环校验错误（10021）。
 
 ## 计分规则说明
 
