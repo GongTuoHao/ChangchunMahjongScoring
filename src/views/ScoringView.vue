@@ -37,7 +37,7 @@ function onWinMethodChange(value: string): void {
         <div class="flex flex-col gap-4">
           <OptionRadioGroup
             name="handType"
-            title="选择牌型"
+            title="牌型"
             :options="handTypeOptions"
             :model-value="selectedHandType"
             :show-error="false"
@@ -46,7 +46,7 @@ function onWinMethodChange(value: string): void {
 
           <OptionRadioGroup
             name="winMethod"
-            title="选择胡法"
+            title="胡法"
             :options="winMethodOptions"
             :model-value="selectedWinMethod"
             :show-error="false"
