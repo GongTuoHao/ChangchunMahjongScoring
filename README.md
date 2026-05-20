@@ -49,6 +49,21 @@ npm run preview
 - 构建产物输出目录：`dist/`
 - `dist/` 可直接部署到任意静态托管平台
 
+## Cloudflare Pages 部署
+
+推荐配置如下：
+
+- Framework preset：`None`（或 `Vite`）
+- Build command：`npm run build`
+- Build output directory：`dist`
+- Node.js 版本：`22`（建议 22.12+）
+
+注意事项：
+
+- 本项目已显式补齐 Pages 构建环境常见缺失的 Linux 原生可选依赖（rolldown、lightningcss、tailwindcss oxide）。
+- 若修改依赖后仍出现构建缓存导致的缺包，请在 Pages 控制台执行 **Clear build cache** 后重新部署。
+- 项目包含 `public/_redirects`：`/* /index.html 200`，用于 SPA 场景下的刷新与直达路由回退。
+
 ## 计分规则说明
 
 - 当前项目采用固定映射计分方式（牌型 × 胡法）
