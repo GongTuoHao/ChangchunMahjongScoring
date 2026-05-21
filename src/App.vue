@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { loadAppSettings, persistAppSettings, type AppMode } from "./utils/appSettings";
+import { loadAppSettings, persistAppSettings, type AppMode, type AppSettings } from "./utils/appSettings";
 import type { RoundCalculatorSnapshot } from "./utils/peakStore";
 import {
   addRoundToActivePeak,
@@ -19,9 +19,11 @@ type TabKey = "list" | "calculator" | "settings";
 
 const activeTab = ref<TabKey>("calculator");
 const peakStore = ref(loadPeakStore());
-const appMode = ref<AppMode>(loadAppSettings().mode);
+const appSettings = ref<AppSettings>(loadAppSettings());
 const activePeak = computed(() => getActivePeak(peakStore.value));
 const hasActivePeak = computed(() => activePeak.value !== null);
+const appMode = computed<AppMode>(() => appSettings.value.mode);
+const scoreCap = computed<number>(() => appSettings.value.scoreCap);
 const isRecordMode = computed(() => appMode.value === "record");
 const peaks = computed(() => [...peakStore.value.peaks].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
 
@@ -34,11 +36,22 @@ function switchTab(tab: TabKey): void {
 }
 
 function updateMode(mode: AppMode): void {
-  appMode.value = mode;
-  persistAppSettings({ mode });
+  appSettings.value = {
+    ...appSettings.value,
+    mode,
+  };
+  persistAppSettings(appSettings.value);
   if (mode === "calculator" && activeTab.value === "list") {
     activeTab.value = "calculator";
   }
+}
+
+function updateScoreCap(scoreCap: number): void {
+  appSettings.value = {
+    ...appSettings.value,
+    scoreCap,
+  };
+  persistAppSettings(appSettings.value);
 }
 
 function handleStartPeak(): void {
@@ -82,13 +95,16 @@ onMounted(() => {
           v-else-if="activeTab === 'calculator'"
           :has-active-peak="hasActivePeak"
           :mode="appMode"
+          :score-cap="scoreCap"
           @start-peak="handleStartPeak"
           @save-round="handleSaveRound"
         />
         <SettingsView
           v-else
           :mode="appMode"
+          :score-cap="scoreCap"
           @update-mode="updateMode"
+          @update-score-cap="updateScoreCap"
         />
       </div>
 

@@ -11,6 +11,7 @@ const props = defineProps<{
   handType: HandType;
   winMethod: WinMethod;
   mode: AppMode;
+  scoreCap: number;
   resetVersion: number;
 }>();
 
@@ -107,6 +108,38 @@ const selectedOption = computed<ScoreOptionItem | null>(() => {
   return scoreOptions.value.find((option) => option.id === selectedOptionId.value) ?? null;
 });
 
+const normalizedScoreCap = computed<number>(() => Math.max(0, Math.trunc(props.scoreCap || 0)));
+const cappedNormalScores = computed<number[]>(() => {
+  const normalScores = props.result?.normalScores ?? [];
+  if (normalizedScoreCap.value === 0) {
+    return [...normalScores];
+  }
+
+  return normalScores.map((score) => Math.min(score, normalizedScoreCap.value));
+});
+const cappedWinnerScore = computed<number>(() =>
+  cappedNormalScores.value.reduce((sum, score) => sum + score, 0),
+);
+const rawRecordResult = computed<number>(() => {
+  if (!props.result || !selectedOption.value) {
+    return 0;
+  }
+
+  if (selectedOption.value.kind === "winner") {
+    return props.result.totalScore;
+  }
+
+  if (selectedOption.value.kind === "runner") {
+    return 0;
+  }
+
+  if (selectedOption.value.kind === "baosanjia") {
+    return -selectedOption.value.scoreValue * 3;
+  }
+
+  return -selectedOption.value.scoreValue;
+});
+
 watch(
   () => props.result,
   () => {
@@ -133,18 +166,33 @@ const recordResult = computed<number>(() => {
   }
 
   if (selectedOption.value.kind === "winner") {
-    return selectedOption.value.scoreValue;
+    return cappedWinnerScore.value;
   }
 
   if (selectedOption.value.kind === "runner") {
     return 0;
   }
 
-  if (selectedOption.value.kind === "baosanjia") {
-    return -selectedOption.value.scoreValue * 3;
+  if (normalizedScoreCap.value === 0) {
+    if (selectedOption.value.kind === "baosanjia") {
+      return -selectedOption.value.scoreValue * 3;
+    }
+
+    return -selectedOption.value.scoreValue;
   }
 
-  return -selectedOption.value.scoreValue;
+  if (selectedOption.value.kind === "baosanjia") {
+    return Math.max(-selectedOption.value.scoreValue * 3, -normalizedScoreCap.value * 3);
+  }
+
+  return Math.max(-selectedOption.value.scoreValue, -normalizedScoreCap.value);
+});
+const isCapTriggered = computed<boolean>(() => {
+  if (normalizedScoreCap.value === 0 || !selectedOption.value) {
+    return false;
+  }
+
+  return rawRecordResult.value !== recordResult.value;
 });
 
 const recordResultClass = computed<string>(() => {
@@ -398,14 +446,23 @@ onBeforeUnmount(() => {
                 />
                 <span class="text-slate-700">{{ option.label }}</span>
               </label>
-              <div class="flex min-w-0 items-center justify-end rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm">
-                <span :class="['text-lg font-bold leading-none', recordResultClass]">
-                  {{ recordResult }}
-                </span>
+              <div class="rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm">
+                <div class="flex min-w-0 items-center justify-end">
+                  <span :class="['text-lg font-bold leading-none', recordResultClass]">
+                    {{ recordResult }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <p
+          v-if="isCapTriggered"
+          class="mt-1 text-right text-[0.75rem] leading-4 font-medium text-amber-600"
+        >
+          本局触发封顶，封顶分值：{{ normalizedScoreCap }}
+        </p>
 
         <div class="mt-3 grid grid-cols-12 gap-2">
           <div class="col-span-9 grid grid-cols-2 gap-2 min-w-0">

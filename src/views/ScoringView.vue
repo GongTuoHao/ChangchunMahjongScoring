@@ -10,6 +10,7 @@ import { HAND_TYPE_OPTIONS, WIN_METHOD_OPTIONS, type HandType, type WinMethod } 
 const props = defineProps<{
   hasActivePeak: boolean;
   mode: AppMode;
+  scoreCap: number;
 }>();
 
 const emit = defineEmits<{
@@ -109,6 +110,7 @@ function onResetCalculator(): void {
         :hand-type="selectedHandType"
         :win-method="selectedWinMethod"
         :mode="props.mode"
+        :score-cap="props.scoreCap"
         :reset-version="resetVersion"
         @reset-calculator="onResetCalculator"
         @save-round="onSaveRound"
