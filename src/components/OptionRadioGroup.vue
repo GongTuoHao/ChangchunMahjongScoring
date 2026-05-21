@@ -24,7 +24,7 @@ function onChange(event: Event): void {
 
 <template>
   <div>
-    <h2 class="mb-4 text-[20px] leading-6 font-medium text-[var(--primary-color)]">{{ title }}</h2>
+    <h2 class="mb-4 text-[1.25rem] leading-6 font-medium text-[var(--primary-color)]">{{ title }}</h2>
     <div class="flex flex-wrap gap-3">
       <label
         v-for="option in props.options"

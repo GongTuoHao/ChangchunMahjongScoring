@@ -138,9 +138,9 @@ watch(
 
 <template>
   <section class="h-full overflow-y-auto bg-[var(--bg-page)] px-3 py-5 sm:px-5">
-    <div class="mx-auto flex w-full max-w-[600px] flex-col gap-3 rounded-[4px] bg-[var(--bg-content)] p-4 shadow-[var(--box-shadow)]">
+    <div class="mx-auto flex w-full max-w-[42rem] flex-col gap-3 rounded-[0.25rem] bg-[var(--bg-content)] p-4 shadow-[var(--box-shadow)]">
       <header>
-        <h1 class="text-center text-[20px] leading-6 font-medium text-[var(--primary-color)]">对局列表</h1>
+        <h1 class="text-center text-[1.25rem] leading-6 font-medium text-[var(--primary-color)]">对局列表</h1>
       </header>
 
       <div class="flex flex-col gap-3">
@@ -149,11 +149,11 @@ watch(
           :key="peak.id"
           class="rounded border border-slate-200 bg-slate-50 p-3"
         >
-          <div class="mb-2 flex w-full items-center justify-between rounded px-1 py-1">
-            <span class="text-sm font-semibold text-[var(--primary-color)]">
+          <div class="mb-2 flex w-full items-center justify-between gap-3 rounded px-1 py-1">
+            <span class="min-w-0 text-sm font-semibold text-[var(--primary-color)]">
               {{ formatDateOnly(peak.createdAt) }} 第 {{ peak.dayPeakNo }} 峰
             </span>
-            <span class="flex items-center gap-2">
+            <span class="flex shrink-0 items-center gap-2">
               <button
                 v-if="peak.status === 'active'"
                 class="rounded border border-[var(--error-color)] px-2 py-1 text-xs font-medium text-[var(--error-color)] transition-colors hover:bg-[var(--error-color)] hover:text-white active:scale-[0.98]"
@@ -174,10 +174,13 @@ watch(
 
           <div
             v-if="!isExpanded(peak.id)"
-            class="grid grid-cols-[1fr_auto] items-center rounded border border-slate-200 bg-white px-3 py-2 text-sm"
+            class="flex items-center justify-between gap-3 rounded border border-slate-200 bg-white px-3 py-2 text-sm"
           >
-            <span class="text-slate-600">时间：{{ formatTimeOnly(peak.createdAt) }}</span>
-            <span :class="getPeakTotalScore(peak) >= 0 ? 'font-semibold text-emerald-700' : 'font-semibold text-[var(--error-color)]'">
+            <span class="min-w-0 text-slate-600">时间：{{ formatTimeOnly(peak.createdAt) }}</span>
+            <span :class="[
+              'shrink-0 font-semibold',
+              getPeakTotalScore(peak) >= 0 ? 'text-emerald-700' : 'text-[var(--error-color)]',
+            ]">
               总分：{{ getPeakTotalScore(peak) }}
             </span>
           </div>
@@ -207,7 +210,7 @@ watch(
                     <p class="text-xs text-slate-500">胡分：{{ round.snapshot.huScore }} | 杠分：{{ round.snapshot.gangScore }}</p>
                   </div>
                 </div>
-                <div class="shrink-0 flex items-center gap-2">
+                <div class="flex shrink-0 items-center gap-2">
                   <span
                     class="text-base font-semibold"
                     :class="[
@@ -242,7 +245,7 @@ watch(
         v-if="showCompleteConfirm"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4"
       >
-        <div class="w-full max-w-sm rounded border border-slate-200 bg-white p-4 shadow-xl">
+        <div class="w-full max-w-sm rounded-[0.25rem] border border-slate-200 bg-white p-4 shadow-xl">
           <h2 class="text-base font-semibold text-slate-800">结束本峰</h2>
           <p class="mt-2 text-sm text-slate-600">确认结束本峰吗？结束后将无法继续在该峰内记录对局。</p>
           <div class="mt-4 flex justify-end gap-2">
@@ -270,11 +273,11 @@ watch(
         v-if="showAmendDialog"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4"
       >
-        <div class="w-full max-w-sm rounded border border-slate-200 bg-white p-4 shadow-xl">
+        <div class="w-full max-w-sm rounded-[0.25rem] border border-slate-200 bg-white p-4 shadow-xl">
           <h2 class="text-base font-semibold text-slate-800">手动修改最新一局</h2>
           <p class="mt-1 text-xs text-slate-500">原记录会标记为作废，并新增一条“手动添加”记录。</p>
 
-          <div class="mt-3 grid grid-cols-2 gap-3">
+          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label class="flex flex-col gap-1 text-sm text-slate-700">
               <span>胡分</span>
               <input

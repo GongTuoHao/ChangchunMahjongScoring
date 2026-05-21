@@ -69,8 +69,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-screen overflow-x-auto overflow-y-hidden bg-[var(--bg-page)]">
-    <div class="mx-auto flex h-full w-full min-w-[420px] max-w-[600px] flex-col">
+  <div class="h-dvh min-h-dvh overflow-hidden bg-[var(--bg-page)]">
+    <div class="mx-auto flex h-full w-full min-w-0 max-w-[42rem] flex-col">
       <div class="flex-1 overflow-hidden">
         <RecordListView
           v-if="activeTab === 'list' && isRecordMode"
@@ -96,13 +96,15 @@ onMounted(() => {
         <div
           :class="[
             'grid w-full gap-2 px-3 py-2',
-            isRecordMode ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-[1fr_auto]',
+            isRecordMode
+              ? 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.875rem]'
+              : 'grid-cols-[minmax(0,1fr)_2.875rem]',
           ]"
         >
         <button
           v-if="isRecordMode"
           :class="[
-            'flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors',
+            'flex min-w-0 items-center justify-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors',
             activeTab === 'list' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700',
           ]"
           type="button"
@@ -116,7 +118,7 @@ onMounted(() => {
 
         <button
           :class="[
-            'flex items-center justify-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors',
+            'flex min-w-0 items-center justify-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors',
             activeTab === 'calculator' ? 'bg-[var(--primary-color)] text-white' : 'bg-slate-100 text-slate-700',
           ]"
           type="button"

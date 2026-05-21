@@ -62,12 +62,12 @@ function onResetCalculator(): void {
 
 <template>
   <main class="h-full overflow-y-auto bg-[var(--bg-page)] px-3 py-5 sm:px-5">
-    <div class="mx-auto flex w-full max-w-[600px] flex-col gap-4 rounded-[4px] bg-[var(--bg-content)] p-4 shadow-[var(--box-shadow)]">
+    <div class="mx-auto flex w-full max-w-[42rem] flex-col gap-4 rounded-[0.25rem] bg-[var(--bg-content)] p-4 shadow-[var(--box-shadow)]">
       <header>
-        <h1 class="mb-2 text-center text-[20px] leading-6 font-medium text-[var(--primary-color)]">长春麻将算分器</h1>
+        <h1 class="mb-2 text-center text-[1.25rem] leading-6 font-medium text-[var(--primary-color)]">长春麻将算分器</h1>
       </header>
 
-      <section v-if="shouldShowStartPeak" class="rounded-[4px] bg-[var(--bg-card-top)] p-4 shadow-[var(--box-shadow)]">
+      <section v-if="shouldShowStartPeak" class="rounded-[0.25rem] bg-[var(--bg-card-top)] p-4 shadow-[var(--box-shadow)]">
         <div class="flex flex-col items-center gap-3 py-3">
           <p class="text-sm text-slate-600">当前没有进行中的峰</p>
           <button
@@ -80,7 +80,7 @@ function onResetCalculator(): void {
         </div>
       </section>
 
-      <section v-if="shouldShowCalculator" class="rounded-[4px] bg-[var(--bg-card-top)] p-4 shadow-[var(--box-shadow)]">
+      <section v-if="shouldShowCalculator" class="rounded-[0.25rem] bg-[var(--bg-card-top)] p-4 shadow-[var(--box-shadow)]">
         <div class="flex flex-col gap-4">
           <OptionRadioGroup
             name="handType"

@@ -39,10 +39,14 @@ let saveToastTimer: number | null = null;
 
 const GANG_MIN = 0;
 const GANG_MAX = 100;
-const PICKER_ITEM_HEIGHT = 30;
+const PICKER_ITEM_HEIGHT_REM = 1.875;
 const PICKER_VISIBLE_COUNT = 3;
-const PICKER_PADDING_HEIGHT = ((PICKER_VISIBLE_COUNT - 1) / 2) * PICKER_ITEM_HEIGHT;
+const remBasePx = ref(16);
 const gangScoreValues = Array.from({ length: GANG_MAX - GANG_MIN + 1 }, (_, index) => GANG_MIN + index);
+const pickerItemHeightPx = computed<number>(() => PICKER_ITEM_HEIGHT_REM * remBasePx.value);
+const pickerPaddingHeight = computed<number>(
+  () => ((PICKER_VISIBLE_COUNT - 1) / 2) * pickerItemHeightPx.value,
+);
 
 const normalScoreOptions = computed<ScoreOptionItem[]>(() => {
   if (!props.result) {
@@ -84,7 +88,7 @@ const roleOptions = computed<ScoreOptionItem[]>(() => {
     },
     {
       id: "baosanjia",
-      label: "包三家",
+      label: "包赔",
       kind: "baosanjia" as const,
       scoreValue: winnerScore,
     },
@@ -255,12 +259,21 @@ function clampGangValue(value: number): number {
   return Math.min(GANG_MAX, Math.max(GANG_MIN, value));
 }
 
+function syncRemBasePx(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const nextValue = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+  remBasePx.value = Number.isFinite(nextValue) ? nextValue : 16;
+}
+
 function syncPickerScroll(pickerRef: HTMLDivElement | null, value: number): void {
   if (!pickerRef) {
     return;
   }
 
-  pickerRef.scrollTop = value * PICKER_ITEM_HEIGHT;
+  pickerRef.scrollTop = value * pickerItemHeightPx.value;
 }
 
 function setSelfGangScore(value: number): void {
@@ -273,7 +286,7 @@ function setOtherGangScore(value: number): void {
 
 function onGangPickerScroll(type: "self" | "other", event: Event): void {
   const target = event.target as HTMLDivElement;
-  const nextValue = clampGangValue(Math.round(target.scrollTop / PICKER_ITEM_HEIGHT));
+  const nextValue = clampGangValue(Math.round(target.scrollTop / pickerItemHeightPx.value));
 
   if (type === "self" && nextValue !== selfGangScore.value) {
     selfGangScore.value = nextValue;
@@ -285,6 +298,8 @@ function onGangPickerScroll(type: "self" | "other", event: Event): void {
 }
 
 onMounted(() => {
+  syncRemBasePx();
+  window.addEventListener("resize", syncRemBasePx);
   nextTick(() => {
     syncPickerScroll(selfGangPickerRef.value, selfGangScore.value);
     syncPickerScroll(otherGangPickerRef.value, otherGangTotalScore.value);
@@ -299,6 +314,11 @@ watch(otherGangTotalScore, (value) => {
   syncPickerScroll(otherGangPickerRef.value, value);
 });
 
+watch(remBasePx, () => {
+  syncPickerScroll(selfGangPickerRef.value, selfGangScore.value);
+  syncPickerScroll(otherGangPickerRef.value, otherGangTotalScore.value);
+});
+
 watch(
   () => props.resetVersion,
   () => {
@@ -307,6 +327,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", syncRemBasePx);
   if (saveToastTimer !== null) {
     window.clearTimeout(saveToastTimer);
   }
@@ -314,9 +335,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="rounded-[4px] bg-[var(--bg-card-bottom)] p-4 shadow-[var(--box-shadow)]">
+  <section class="rounded-[0.25rem] bg-[var(--bg-card-bottom)] p-4 shadow-[var(--box-shadow)]">
     <div
-      class="rounded-[4px] border border-[#E0E0E0] bg-[var(--bg-content)] p-4"
+      class="rounded-[0.25rem] border border-[#E0E0E0] bg-[var(--bg-content)] p-4"
     >
       <p v-if="errorMessage" class="text-base leading-5 text-[var(--error-color)]">
         {{ errorMessage }}
@@ -324,13 +345,12 @@ onBeforeUnmount(() => {
       <div v-else-if="result" class="relative w-full">
         <div class="grid gap-2">
           <div class="rounded bg-white">
-            <div class="flex items-stretch gap-2">
+            <div class="grid grid-cols-4 gap-2">
               <label
-                v-for="(option, index) in roleOptions"
+                v-for="option in roleOptions"
                 :key="option.id"
                 :class="[
-                  'inline-flex items-center justify-center gap-1 rounded border px-2 py-1 text-sm',
-                  index === 3 ? 'min-w-0 flex-1' : 'shrink-0 whitespace-nowrap',
+                  'inline-flex min-w-0 items-center justify-center gap-1 rounded border px-2 py-1 text-sm',
                   option.disabled
                     ? 'cursor-not-allowed border-slate-200 text-slate-400'
                     : 'cursor-pointer border-slate-300',
@@ -347,7 +367,7 @@ onBeforeUnmount(() => {
                 <span
                   class="whitespace-nowrap"
                   :class="
-                    option.kind === 'black'
+                    option.kind === 'baosanjia'
                       ? option.disabled
                         ? 'text-slate-400'
                         : 'font-semibold text-[var(--error-color)]'
@@ -363,11 +383,11 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="rounded bg-white">
-            <div class="flex items-stretch gap-2">
+            <div class="grid grid-cols-4 gap-2">
               <label
                 v-for="option in normalScoreOptions"
                 :key="option.id"
-                class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded border border-slate-300 px-2 py-1 text-sm"
+                class="inline-flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded border border-slate-300 px-2 py-1 text-sm"
               >
                 <input
                   v-model="selectedOptionId"
@@ -378,7 +398,7 @@ onBeforeUnmount(() => {
                 />
                 <span class="text-slate-700">{{ option.label }}</span>
               </label>
-              <div class="flex min-w-0 flex-1 items-center justify-end rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm">
+              <div class="flex min-w-0 items-center justify-end rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm">
                 <span :class="['text-lg font-bold leading-none', recordResultClass]">
                   {{ recordResult }}
                 </span>
@@ -388,7 +408,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="mt-3 grid grid-cols-12 gap-2">
-          <div class="col-span-9 grid grid-cols-2 gap-2">
+          <div class="col-span-9 grid grid-cols-2 gap-2 min-w-0">
             <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2">
               <div class="mb-1 flex items-center justify-between">
                 <span class="text-slate-600">内杠</span>
@@ -401,7 +421,7 @@ onBeforeUnmount(() => {
                   class="picker-scroll"
                   @scroll.passive="onGangPickerScroll('self', $event)"
                 >
-                  <div :style="{ height: `${PICKER_PADDING_HEIGHT}px` }"></div>
+                  <div :style="{ height: `${pickerPaddingHeight}px` }"></div>
                   <button
                     v-for="value in gangScoreValues"
                     :key="`self-${value}`"
@@ -411,7 +431,7 @@ onBeforeUnmount(() => {
                   >
                     <span :class="value === selfGangScore ? 'picker-item-active' : 'picker-item-text'">{{ value }}</span>
                   </button>
-                  <div :style="{ height: `${PICKER_PADDING_HEIGHT}px` }"></div>
+                  <div :style="{ height: `${pickerPaddingHeight}px` }"></div>
                 </div>
               </div>
             </div>
@@ -428,7 +448,7 @@ onBeforeUnmount(() => {
                   class="picker-scroll"
                   @scroll.passive="onGangPickerScroll('other', $event)"
                 >
-                  <div :style="{ height: `${PICKER_PADDING_HEIGHT}px` }"></div>
+                  <div :style="{ height: `${pickerPaddingHeight}px` }"></div>
                   <button
                     v-for="value in gangScoreValues"
                     :key="`other-${value}`"
@@ -438,7 +458,7 @@ onBeforeUnmount(() => {
                   >
                     <span :class="value === otherGangTotalScore ? 'picker-item-active' : 'picker-item-text'">{{ value }}</span>
                   </button>
-                  <div :style="{ height: `${PICKER_PADDING_HEIGHT}px` }"></div>
+                  <div :style="{ height: `${pickerPaddingHeight}px` }"></div>
                 </div>
               </div>
             </div>
@@ -449,10 +469,10 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <p class="mt-1 whitespace-nowrap text-xs text-slate-500">内杠计3倍正分，外杠计1倍负分</p>
+        <p class="mt-1 text-xs text-slate-500 sm:whitespace-nowrap">内杠计3倍正分，外杠计1倍负分</p>
 
         <div class="mt-3 grid grid-cols-12 gap-2">
-          <div class="col-span-7">
+          <div class="col-span-6">
             <button
               class="h-full w-full rounded border border-[var(--primary-color)] bg-[var(--primary-color)] px-3 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--primary-hover)] hover:shadow active:scale-[0.99] active:bg-[var(--primary-active)]"
               type="button"
@@ -461,7 +481,7 @@ onBeforeUnmount(() => {
               {{ props.mode === "calculator" ? "重置" : "保存本局" }}
             </button>
           </div>
-          <div class="col-span-5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+          <div class="col-span-6 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
             <span class="text-slate-600">总分</span>
             <span :class="['text-2xl font-bold leading-none', roundTotalScoreClass]">{{ roundTotalScore }}</span>
           </div>
@@ -487,10 +507,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .picker-wrap {
   position: relative;
-  height: 90px;
+  height: 5.625rem;
   overflow: hidden;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 0.0625rem solid #cbd5e1;
+  border-radius: 0.375rem;
   background: #fff;
 }
 
@@ -507,20 +527,20 @@ onBeforeUnmount(() => {
 
 .picker-highlight {
   position: absolute;
-  left: 6px;
-  right: 6px;
+  left: 0.375rem;
+  right: 0.375rem;
   top: 50%;
-  height: 30px;
+  height: 1.875rem;
   transform: translateY(-50%);
-  border-top: 1px solid #cbd5e1;
-  border-bottom: 1px solid #cbd5e1;
+  border-top: 0.0625rem solid #cbd5e1;
+  border-bottom: 0.0625rem solid #cbd5e1;
   pointer-events: none;
   z-index: 1;
 }
 
 .picker-item {
   width: 100%;
-  height: 30px;
+  height: 1.875rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -532,13 +552,13 @@ onBeforeUnmount(() => {
 
 .picker-item-text {
   color: #64748b;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .picker-item-active {
   color: #0f172a;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .save-tip-enter-active,
