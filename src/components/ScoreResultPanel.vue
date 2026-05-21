@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { ScoreResult } from "../utils/calculateScore";
+import type { AppMode } from "../utils/appSettings";
+import type { RoundCalculatorSnapshot } from "../utils/peakStore";
+import type { HandType, WinMethod } from "../utils/scoringRules";
 
 const props = defineProps<{
   result: ScoreResult | null;
   errorMessage: string | null;
+  handType: HandType;
+  winMethod: WinMethod;
+  mode: AppMode;
+  resetVersion: number;
+}>();
+
+const emit = defineEmits<{
+  (event: "save-round", snapshot: RoundCalculatorSnapshot): void;
+  (event: "reset-calculator"): void;
 }>();
 
 interface ScoreOptionItem {
   readonly id: string;
   readonly label: string;
-  readonly kind: "score" | "black" | "winner" | "runner";
+  readonly kind: "score" | "black" | "winner" | "runner" | "baosanjia";
   readonly scoreValue: number;
   readonly disabled?: boolean;
 }
@@ -18,8 +30,12 @@ interface ScoreOptionItem {
 const selectedOptionId = ref<string>("");
 const selfGangScore = ref<number>(0);
 const otherGangTotalScore = ref<number>(0);
+const showToast = ref(false);
+const toastMessage = ref("");
+const toastKind = ref<"success" | "error">("success");
 const selfGangPickerRef = ref<HTMLDivElement | null>(null);
 const otherGangPickerRef = ref<HTMLDivElement | null>(null);
+let saveToastTimer: number | null = null;
 
 const GANG_MIN = 0;
 const GANG_MAX = 100;
@@ -44,12 +60,13 @@ const normalScoreOptions = computed<ScoreOptionItem[]>(() => {
 const roleOptions = computed<ScoreOptionItem[]>(() => {
   const hasBlackCannon = props.result?.hasBlackCannon ?? false;
   const blackCannonScore = props.result?.blackCannonScore ?? 0;
+  const winnerScore = props.result?.totalScore ?? 0;
   return [
     {
       id: "winner",
       label: "赢家",
       kind: "winner" as const,
-      scoreValue: props.result?.totalScore ?? 0,
+      scoreValue: winnerScore,
     },
     {
       id: "black-cannon",
@@ -64,6 +81,12 @@ const roleOptions = computed<ScoreOptionItem[]>(() => {
       kind: "runner" as const,
       scoreValue: 0,
       disabled: !hasBlackCannon,
+    },
+    {
+      id: "baosanjia",
+      label: "包三家",
+      kind: "baosanjia" as const,
+      scoreValue: winnerScore,
     },
   ];
 });
@@ -111,6 +134,10 @@ const recordResult = computed<number>(() => {
 
   if (selectedOption.value.kind === "runner") {
     return 0;
+  }
+
+  if (selectedOption.value.kind === "baosanjia") {
+    return -selectedOption.value.scoreValue * 3;
   }
 
   return -selectedOption.value.scoreValue;
@@ -161,6 +188,69 @@ const roundTotalScoreClass = computed<string>(() => {
   return "text-slate-600";
 });
 
+function resetPanelState(): void {
+  selectedOptionId.value = "";
+  selfGangScore.value = 0;
+  otherGangTotalScore.value = 0;
+}
+
+function handleSaveRound(): void {
+  if (!props.result) {
+    return;
+  }
+
+  if (!props.handType || !props.winMethod) {
+    triggerToast("请先选择牌型和胡法", "error");
+    return;
+  }
+
+  if (!selectedOption.value) {
+    triggerToast("请选择胡牌信息", "error");
+    return;
+  }
+
+  const selected = selectedOption.value;
+  emit("save-round", {
+    handType: props.handType,
+    winMethod: props.winMethod,
+    scoreResult: props.result,
+    selectedOptionId: selected?.id ?? null,
+    selectedOptionLabel: selected?.label ?? null,
+    huScore: recordResult.value,
+    selfGangScore: selfGangScore.value,
+    otherGangScore: otherGangTotalScore.value,
+    selfGangResult: selfGangResult.value,
+    otherGangResult: otherGangResult.value,
+    gangScore: gangRecordResult.value,
+    roundTotalScore: roundTotalScore.value,
+  });
+
+  triggerToast("保存成功", "success");
+}
+
+function handlePrimaryAction(): void {
+  if (props.mode === "calculator") {
+    resetPanelState();
+    emit("reset-calculator");
+    return;
+  }
+
+  handleSaveRound();
+}
+
+function triggerToast(message: string, kind: "success" | "error"): void {
+  toastMessage.value = message;
+  toastKind.value = kind;
+  showToast.value = true;
+  if (saveToastTimer !== null) {
+    window.clearTimeout(saveToastTimer);
+  }
+  saveToastTimer = window.setTimeout(() => {
+    showToast.value = false;
+    saveToastTimer = null;
+  }, 3000);
+}
+
 function clampGangValue(value: number): number {
   return Math.min(GANG_MAX, Math.max(GANG_MIN, value));
 }
@@ -208,6 +298,19 @@ watch(selfGangScore, (value) => {
 watch(otherGangTotalScore, (value) => {
   syncPickerScroll(otherGangPickerRef.value, value);
 });
+
+watch(
+  () => props.resetVersion,
+  () => {
+    resetPanelState();
+  },
+);
+
+onBeforeUnmount(() => {
+  if (saveToastTimer !== null) {
+    window.clearTimeout(saveToastTimer);
+  }
+});
 </script>
 
 <template>
@@ -218,39 +321,16 @@ watch(otherGangTotalScore, (value) => {
       <p v-if="errorMessage" class="text-base leading-5 text-[var(--error-color)]">
         {{ errorMessage }}
       </p>
-      <div v-else-if="result" class="w-full">
-        <div class="grid grid-cols-12 gap-2">
-          <div class="col-span-9 rounded border border-slate-300 bg-white p-2">
-            <div class="grid grid-cols-3 gap-2">
+      <div v-else-if="result" class="relative w-full">
+        <div class="grid gap-2">
+          <div class="rounded bg-white">
+            <div class="flex items-stretch gap-2">
               <label
-                v-for="option in normalScoreOptions"
-                :key="option.id"
-                class="inline-flex w-full cursor-pointer items-center justify-center gap-1 rounded border border-slate-300 px-2 py-1 text-sm"
-              >
-                <input
-                  v-model="selectedOptionId"
-                  :value="option.id"
-                  class="h-4 w-4 accent-[var(--primary-color)]"
-                  name="score-choice"
-                  type="radio"
-                />
-                <span class="text-slate-700">{{ option.label }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="col-span-3 row-span-2 flex flex-col items-center justify-center rounded border border-slate-200 bg-slate-50 px-2 py-2 text-sm">
-            <span class="text-slate-600">胡牌</span>
-            <span :class="['mt-1 text-2xl font-bold', recordResultClass]">{{ recordResult }}</span>
-          </div>
-
-          <div class="col-span-9 rounded border border-slate-300 bg-white p-2">
-            <div class="grid grid-cols-3 gap-2">
-              <label
-                v-for="option in roleOptions"
+                v-for="(option, index) in roleOptions"
                 :key="option.id"
                 :class="[
-                  'inline-flex w-full items-center justify-center gap-1 rounded border px-2 py-1 text-sm',
+                  'inline-flex items-center justify-center gap-1 rounded border px-2 py-1 text-sm',
+                  index === 3 ? 'min-w-0 flex-1' : 'shrink-0 whitespace-nowrap',
                   option.disabled
                     ? 'cursor-not-allowed border-slate-200 text-slate-400'
                     : 'cursor-pointer border-slate-300',
@@ -279,6 +359,30 @@ watch(otherGangTotalScore, (value) => {
                   {{ option.label }}
                 </span>
               </label>
+            </div>
+          </div>
+
+          <div class="rounded bg-white">
+            <div class="flex items-stretch gap-2">
+              <label
+                v-for="option in normalScoreOptions"
+                :key="option.id"
+                class="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded border border-slate-300 px-2 py-1 text-sm"
+              >
+                <input
+                  v-model="selectedOptionId"
+                  :value="option.id"
+                  class="h-4 w-4 accent-[var(--primary-color)]"
+                  name="score-choice"
+                  type="radio"
+                />
+                <span class="text-slate-700">{{ option.label }}</span>
+              </label>
+              <div class="flex min-w-0 flex-1 items-center justify-end rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm">
+                <span :class="['text-lg font-bold leading-none', recordResultClass]">
+                  {{ recordResult }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -341,27 +445,39 @@ watch(otherGangTotalScore, (value) => {
           </div>
 
           <div class="col-span-3 relative flex flex-col items-center justify-center rounded border border-slate-200 bg-slate-50 px-2 py-2 text-sm">
-            <span class="text-slate-600">杠牌</span>
-            <span :class="['mt-1 text-2xl font-bold', gangRecordResultClass]">{{ gangRecordResult }}</span>
+            <span :class="['text-2xl font-bold', gangRecordResultClass]">{{ gangRecordResult }}</span>
           </div>
         </div>
 
         <p class="mt-1 whitespace-nowrap text-xs text-slate-500">内杠计3倍正分，外杠计1倍负分</p>
 
         <div class="mt-3 grid grid-cols-12 gap-2">
-          <div class="col-span-9">
+          <div class="col-span-7">
             <button
-              class="h-full w-full rounded border border-[var(--primary-color)] bg-[var(--primary-color)] px-3 py-2 text-sm font-medium text-white"
+              class="h-full w-full rounded border border-[var(--primary-color)] bg-[var(--primary-color)] px-3 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-[var(--primary-hover)] hover:shadow active:scale-[0.99] active:bg-[var(--primary-active)]"
               type="button"
+              @click="handlePrimaryAction"
             >
-              保存本局
+              {{ props.mode === "calculator" ? "重置" : "保存本局" }}
             </button>
           </div>
-          <div class="col-span-3 flex flex-col items-center justify-center rounded border border-slate-200 bg-slate-50 px-2 py-2 text-sm">
+          <div class="col-span-5 flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
             <span class="text-slate-600">总分</span>
-            <span :class="['mt-1 text-2xl font-bold', roundTotalScoreClass]">{{ roundTotalScore }}</span>
+            <span :class="['text-2xl font-bold leading-none', roundTotalScoreClass]">{{ roundTotalScore }}</span>
           </div>
         </div>
+
+        <transition name="save-tip">
+          <div
+            v-if="showToast"
+            :class="[
+              'pointer-events-none absolute bottom-3 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded px-4 py-2 text-sm font-medium text-white shadow-lg',
+              toastKind === 'success' ? 'bg-black/85' : 'bg-[var(--error-color)]/95',
+            ]"
+          >
+            {{ toastMessage }}
+          </div>
+        </transition>
       </div>
       <p v-else class="text-base leading-5 text-[#757575]">请选择上方牌型和胡法</p>
     </div>
@@ -423,5 +539,15 @@ watch(otherGangTotalScore, (value) => {
   color: #0f172a;
   font-weight: 700;
   font-size: 14px;
+}
+
+.save-tip-enter-active,
+.save-tip-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.save-tip-enter-from,
+.save-tip-leave-to {
+  opacity: 0;
 }
 </style>
